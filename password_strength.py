@@ -3,89 +3,7 @@ import re
 import sys
 from math import log2
 
-# filter sequences
-def filter_sequence(password, sequence):
-    """
-    >>> filter_sequence('67890', '1234567890')
-    's'
-    >>> filter_sequence('$654', '0987654321')
-    '$s'
-    >>> filter_sequence('uiopw', 'qwertyuiop')
-    'sw'
-    >>> filter_sequence('', 'qwertyuiop')
-    ''
-    >>> filter_sequence('4567', '')
-    '4567'
-    """
-    seq = ''
-    sequenses = []
 
-    for char_idx in range(len(password)):
-        char = password[char_idx]
-        # print(str(char_idx) + '_____' + char )
-        if char_idx < len(password) - 1:
-            next_char = password[char_idx + 1]
-            # print('next char - '+next_char)
-
-            if char in sequence and char != sequence[len(sequence) - 1]:
-                current_sequence_char_index = sequence.index(char)
-                next_sequence_char = sequence[current_sequence_char_index + 1]
-
-                if next_sequence_char == next_char:  # if match
-                    # print('match ')
-
-                    # print ('match next chars')
-                    seq += str(char)
-
-                    # print('seq='+ seq)
-                else:  # if end of sequence
-
-                    if seq and len(seq) - 1 >= 1:
-                        seq += char
-                        # print('add to sequenses ' + seq)
-                        sequenses.append(seq)
-
-                        seq = ''
-                    # print('next char not in sequence')
-
-            else:
-                if seq and len(seq) - 1 >= 1:
-                    seq += char
-                    sequenses.append(seq)
-
-                    # print('add to sequenses '+ seq)
-                    seq = ''
-                # print('no match')
-        else:
-            if seq and len(seq) - 1 >= 1:
-                seq += char
-                sequenses.append(seq)
-
-                # print('add to sequenses ' + seq)
-                seq = ''
-            # print('end of pass')
-
-    for seq in sequenses:
-        password = password.replace(seq, 's')
-
-    return password
-
-
-def filter_sequences(password):
-    """
-    >>> filter_sequences('1234567890')
-    's'
-    >>> filter_sequences('$654')
-    '$s'
-    >>> filter_sequences('rtyuw')
-    'sw'
-    >>> filter_sequences('qwerty123456')
-    'ss'
-    """
-    sequences = ('1234567890','0987654321','qwertyuiop','asdfghjkl','zxcvbnm')
-    for seq in sequences:
-        password = filter_sequence(password, seq)
-    return password
 
 # Family names
 def filter_names(password):
@@ -100,8 +18,8 @@ def filter_names(password):
     name_pattern = re.compile(r'[A-z]+(ov|ich|ko|ev|in|ik|uk|off)')
     return re.sub(name_pattern,'n',password)
 
- # phone formats
 
+ # phone formats
 def filter_phones(password):
     """
     >>> filter_phones('+375-29-682-63-23')
@@ -111,11 +29,13 @@ def filter_phones(password):
     >>> filter_phones('6826323')
     'p'
     """
-    return (re.sub(r'(\+\d{1,3}?)?[-]?\(?(\d{1,3}?)?\)?[-]?(\d{3})[-]?(\d{2})[-]?(\d{2})', 'p', password))
+    return re.sub(r'(\+\d{1,3}?)?[-]?\(?(\d{1,3}?)?\)?[-]?(\d{3})[-]?(\d{2})[-]?(\d{2})', 'p', password)
+
 
 def filter_dates(password):
     date_pattern = re.compile(r'(([\d]{2})(\W|_)?((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|[\d])(\W|_)?(19|20)([\d]{2}))|(([a-z]{3})(\W|_)?([\d]{2})(\W|_)?(19|20)([\d]{2}))', flags=re.IGNORECASE)
-    return (re.sub(date_pattern, 'd', password))
+    return re.sub(date_pattern, 'd', password)
+
 
 def filter_repetitions(password):
     """
@@ -127,14 +47,14 @@ def filter_repetitions(password):
     'e123o54'
     """
     pattern = re.compile(r"(.+?)\1+")
-
+    index = 1
     repeated = re.findall(pattern, password)
     for repeat in repeated:
         split = password.split(repeat)
-        split.insert(1, repeat)
+        split.insert(index, repeat)
         res = ''
-        for i in split:
-            res += i
+        for ocurrence in split:
+            res += ocurrence
         password = res
 
     return password
@@ -164,6 +84,7 @@ def parse_args(args):
 
     return parser.parse_args(args)
 
+
 def get_password_strength(password):
     """
     To get maximum score 10 password must be 13 chars long and have upper case,
@@ -173,22 +94,10 @@ def get_password_strength(password):
 
     >>> get_password_strength('!PassworD1')
     2
-    >>> get_password_strength('234567qwerty')
-    1
-    >>> get_password_strength('qwerty')
-    1
-    >>> get_password_strength('Qwerty')
-    1
-    >>> get_password_strength('Qw#rty')
-    3
-    >>> get_password_strength('qwertyqwertyqwertyqwerty')
-    1
+    >>> get_password_strength('maxmaxmaxmaxmax')
+    2
     >>> get_password_strength('TvF^%KB6euEb$')
     10
-    >>> get_password_strength('lowercaseonly')
-    6
-    >>> get_password_strength('16925')
-    2
     >>> get_password_strength('TvF^%K')
     5
     >>> get_password_strength('korabkoff')
@@ -200,12 +109,11 @@ def get_password_strength(password):
     """
 
     filters = (blacklist_filter,filter_dates, filter_names, filter_phones,
-               filter_repetitions,filter_sequences)
+               filter_repetitions)
 
     for the_filter in filters:
         password = the_filter(password)
         # print(the_filter.__name__ + ': ' + password)
-
 
     all_chars_count = {
         '[a-z]': 26,
@@ -228,6 +136,7 @@ def get_password_strength(password):
         strength = 10
     return strength
 
+
 if __name__ == '__main__':
 
     try:
@@ -238,3 +147,4 @@ if __name__ == '__main__':
         password = None
 
     print(get_password_strength(password))
+
