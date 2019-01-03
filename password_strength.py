@@ -6,11 +6,11 @@ from math import log2
 # filter sequences
 def filter_sequence(password, sequence):
     """
-    >>> filter_sequence('1234567890', '1234567890')
+    >>> filter_sequence('67890', '1234567890')
     's'
     >>> filter_sequence('$654', '0987654321')
     '$s'
-    >>> filter_sequence('rtyuw', 'qwertyuiop')
+    >>> filter_sequence('uiopw', 'qwertyuiop')
     'sw'
     >>> filter_sequence('', 'qwertyuiop')
     ''
@@ -18,41 +18,59 @@ def filter_sequence(password, sequence):
     '4567'
     """
     seq = ''
-    del_last = False
+    sequenses = []
 
-    for char_idx in range(len(password) - 1):
+    for char_idx in range(len(password)):
         char = password[char_idx]
-        next_char = password[char_idx + 1]
-        if char in sequence:
-            current_sequence_char_index = sequence.index(char)
-            next_sequence_char = sequence[current_sequence_char_index + 1]
-            #                 print ('match ')
-            if next_sequence_char == next_char:  # if match
-                if del_last:
-                    seq = seq[:-1]
-                # print ('match next chars')
-                seq += str(char) + str(next_char)
-                del_last = True
+        # print(str(char_idx) + '_____' + char )
+        if char_idx < len(password) - 1:
+            next_char = password[char_idx + 1]
+            # print('next char - '+next_char)
 
-            else:  # if end of sequence
-                del_last = False
+            if char in sequence and char != sequence[len(sequence) - 1]:
+                current_sequence_char_index = sequence.index(char)
+                next_sequence_char = sequence[current_sequence_char_index + 1]
 
-                if seq and len(sequence) > 2:
-                    password = password.replace(seq, 's')
-                seq = ''
-                #                     print ('end of seq')
+                if next_sequence_char == next_char:  # if match
+                    # print('match ')
+
+                    # print ('match next chars')
+                    seq += str(char)
+
+                    # print('seq='+ seq)
+                else:  # if end of sequence
+
+                    if seq and len(seq) - 1 >= 1:
+                        seq += char
+                        # print('add to sequenses ' + seq)
+                        sequenses.append(seq)
+
+                        seq = ''
+                    # print('next char not in sequence')
+
+            else:
+                if seq and len(seq) - 1 >= 1:
+                    seq += char
+                    sequenses.append(seq)
+
+                    # print('add to sequenses '+ seq)
+                    seq = ''
+                # print('no match')
         else:
-            pass
-        # print ('no match ')
+            if seq and len(seq) - 1 >= 1:
+                seq += char
+                sequenses.append(seq)
 
-        if seq and char_idx == len(password) - 2:
-            password = password.replace(seq, 's')
-            seq = ''
-        # print ('Last char ')
+                # print('add to sequenses ' + seq)
+                seq = ''
+            # print('end of pass')
 
-        # print(password, len(seq), seq, char_idx, len(password) - 2)
+    for seq in sequenses:
+        password = password.replace(seq, 's')
 
     return password
+
+
 def filter_sequences(password):
     """
     >>> filter_sequences('1234567890')
@@ -86,10 +104,10 @@ def filter_names(password):
 
 def filter_phones(password):
     """
-    >>> filter_phones('+375-29-6-82-63-23')
+    >>> filter_phones('+375-29-682-63-23')
     'p'
-    >>> filter_phones('+375296826323')
-    'p'
+    >>> filter_phones('+375296826423')
+    'p423'
     >>> filter_phones('6826323')
     'p'
     """
@@ -149,32 +167,35 @@ def parse_args(args):
 def get_password_strength(password):
     """
     To get maximum score 10 password must be 13 chars long and have upper case,
-     lowercase, numeric and special characters. Script filter pasword for balck
-     list, repetitions,common family names, phones, dates
+     lowercase, numeric and special characters. Script filter pasword if in black
+     list,have repetitions,common family names, phones, dates and replace it with 'b',
+      'r', 'n', 'p', 'd' respectivly
 
     >>> get_password_strength('!PassworD1')
     2
-    >>> get_password_strength('1234567890')
+    >>> get_password_strength('234567qwerty')
     1
     >>> get_password_strength('qwerty')
     1
+    >>> get_password_strength('Qwerty')
+    1
+    >>> get_password_strength('Qw#rty')
+    3
     >>> get_password_strength('qwertyqwertyqwertyqwerty')
     1
     >>> get_password_strength('TvF^%KB6euEb$')
     10
     >>> get_password_strength('lowercaseonly')
-    5
-    >>> get_password_strength('169258761168')
+    6
+    >>> get_password_strength('16925')
     2
     >>> get_password_strength('TvF^%K')
     5
     >>> get_password_strength('korabkoff')
     1
-    >>> get_password_strength('PassworD')
-    1
     >>> get_password_strength('03may1981')
     1
-    >>> get_password_strength('+375296826672')
+    >>> get_password_strength('+375-29-682-66-72')
     1
     """
 
