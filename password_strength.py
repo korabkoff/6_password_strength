@@ -4,7 +4,6 @@ import sys
 from math import log2
 
 
-
 # Family names
 def filter_names(password):
     """
@@ -16,10 +15,10 @@ def filter_names(password):
     'n'
     """
     name_pattern = re.compile(r'[A-z]+(ov|ich|ko|ev|in|ik|uk|off)')
-    return re.sub(name_pattern,'n',password)
+    return re.sub(name_pattern, 'n', password)
 
 
- # phone formats
+# phone formats
 def filter_phones(password):
     """
     >>> filter_phones('+375-29-682-63-23')
@@ -33,7 +32,8 @@ def filter_phones(password):
 
 
 def filter_dates(password):
-    date_pattern = re.compile(r'(([\d]{2})(\W|_)?((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|[\d])(\W|_)?(19|20)([\d]{2}))|(([a-z]{3})(\W|_)?([\d]{2})(\W|_)?(19|20)([\d]{2}))', flags=re.IGNORECASE)
+    date_pattern = re.compile(r'(([\d]{2})(\W|_)?((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|[\d])(\W|_)?(19|20)'
+                              r'([\d]{2}))|(([a-z]{3})(\W|_)?([\d]{2})(\W|_)?(19|20)([\d]{2}))', flags=re.IGNORECASE)
     return re.sub(date_pattern, 'd', password)
 
 
@@ -53,8 +53,8 @@ def filter_repetitions(password):
         split = password.split(repeat)
         split.insert(index, repeat)
         res = ''
-        for ocurrence in split:
-            res += ocurrence
+        for occurrence in split:
+            res += occurrence
         password = res
 
     return password
@@ -108,8 +108,13 @@ def get_password_strength(password):
     1
     """
 
-    filters = (blacklist_filter,filter_dates, filter_names, filter_phones,
-               filter_repetitions)
+    filters = (
+        blacklist_filter,
+        filter_dates,
+        filter_names,
+        filter_phones,
+        filter_repetitions
+               )
 
     for the_filter in filters:
         password = the_filter(password)
