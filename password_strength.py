@@ -1,49 +1,87 @@
-import argparse
 import re
 import sys
 from math import log2
+import getpass
+import requests
 
 
-# Family names
-def filter_names(password):
+def check_slavonic_family_names(password):
     """
-    >>> filter_names('korabkoff')
+    Replace common slavonic family names with 'n'
+
+    >>> check_slavonic_family_names('korabkoff')
     'n'
-    >>> filter_names('Ivanov')
+    >>> check_slavonic_family_names('Ivanov')
     'n'
-    >>> filter_names('Kovalenko')
+    >>> check_slavonic_family_names('Kovalenko')
     'n'
     """
     name_pattern = re.compile(r'[A-z]+(ov|ich|ko|ev|in|ik|uk|off)')
     return re.sub(name_pattern, 'n', password)
 
 
-# phone formats
-def filter_phones(password):
+def check_phones(password):
     """
-    >>> filter_phones('+375-29-682-63-23')
+    Replace phones with 'p'
+
+    >>> check_phones('+375-29-682-63-23')
     'p'
-    >>> filter_phones('+375296826423')
-    'p423'
-    >>> filter_phones('6826323')
+    >>> check_phones('+12(429)6826423')
+    'p'
+    >>> check_phones('6826323')
     'p'
     """
-    return re.sub(r'(\+\d{1,3}?)?[-]?\(?(\d{1,3}?)?\)?[-]?(\d{3})[-]?(\d{2})[-]?(\d{2})', 'p', password)
+    return re.sub(r'''(\+\d{1,3})?           # international code from 1 to 3 digits
+                        [-]?                 # posible -
+                        \(?                  # posible (
+                        (\d{1,3}?)?          # domestic code from 1 to 3 digits
+                        \)?                  # posible )
+                        [-]?                 # posible -
+                        (\d{1,3})            # 3 digits
+                        [-]?                 # posible -
+                        (\d{2})              # 2 digits
+                        [-]?                 # posible -
+                        (\d{2}               # 2 digits
+                        )''', 'p', password, flags=re.X)
 
 
-def filter_dates(password):
-    date_pattern = re.compile(r'(([\d]{2})(\W|_)?((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)|[\d])(\W|_)?(19|20)'
-                              r'([\d]{2}))|(([a-z]{3})(\W|_)?([\d]{2})(\W|_)?(19|20)([\d]{2}))', flags=re.IGNORECASE)
+def check_dates(password):
+    """
+    Replace dates with 'd'
+
+    >>> check_dates('03 may 1981')
+    'd'
+    >>> check_dates('03_MAY_1981')
+    'd'
+    >>> check_dates('03051981')
+    'd'
+    """
+
+    date_pattern = re.compile(r'''(([\d]{2})                  # day - two digitals
+                                  (\W|_)?                     # possible ' ' or _
+                                  ([A-z]{3}|[\d]{2})             # month - 3 letters or 2 digits
+                                  (\W|_)?                     # possible ' ' or _
+                                  (19|20)([\d]{2}))           # year
+                                  |                           # or
+                                  (([A-z]{3}|[\d]{2})            # month - 3 letters or 2 digits
+                                  (\W|_)?                     # possible ' ' or _
+                                  ([\d]{2})                   # day - two digits
+                                  (\W|_)?                     # possible ' ' or _
+                                  (19|20)([\d]{2}))           # year
+                                  ''', re.X)
     return re.sub(date_pattern, 'd', password)
 
 
-def filter_repetitions(password):
+def check_repetitions(password):
     """
-    >>> filter_repetitions('677767776e')
+    Replace repetitions with 'r'
+
+
+    >>> check_repetitions('677767776e')
     '67776e'
-    >>> filter_repetitions('e11111^')
+    >>> check_repetitions('e11111^')
     'e1^'
-    >>> filter_repetitions('e123123123o5454')
+    >>> check_repetitions('e123123123o5454')
     'e123o54'
     """
     pattern = re.compile(r"(.+?)\1+")
@@ -58,42 +96,65 @@ def filter_repetitions(password):
         password = res
 
     return password
-    # return re.sub(pattern, repetiotion, password)
 
 
-# brut check
-def blacklist_filter(password):
+def get_blacklist_from_url(url):
     """
-    >>> blacklist_filter('!PassworD1')
-    '!b1'
-    """
-    with open('brut_force_dict.list') as blacklist_dict_file:
-        blacklist = [row.strip() for row in blacklist_dict_file]
+    Return text from given url request.
 
-        match = max([re.findall(black_match, password, flags=re.IGNORECASE)
-                     for black_match in blacklist])[0]
-    if match:
-        return re.sub(match, 'b', password)
+    >>> get_blacklist_from_url('http://wrong_address.txt')
+    >>> blacklist_url = 'https://raw.githubusercontent.com/korabkoff/6_password_strength/master/brut_force_dict.list'
+    >>> get_blacklist_from_url(blacklist_url)
+    'password\\n123123\\n'
+    """
+
+    try:
+        blacklist_req = requests.get(url)
+    except:
+        return None
+    asseptable_status_code = 200
+    if blacklist_req.status_code <= asseptable_status_code:
+        return str(blacklist_req.text)
+    else:
+        return None
+
+
+def check_blacklist(password, blacklist):
+    """
+    Replace blacklisted password with 'b' based on provided blacklist.
+
+    >>> blacklist_url = 'https://raw.githubusercontent.com/korabkoff/6_password_strength/master/brut_force_dict.list'
+    >>> check_blacklist('password', (get_blacklist_from_url(blacklist_url)))
+    'b'
+    >>> check_blacklist('qzwxec', (get_blacklist_from_url(blacklist_url)))
+    'qzwxec'
+    >>> check_blacklist(None, None)
+
+    >>> check_blacklist('', (get_blacklist_from_url(blacklist_url)))
+
+    """
+    if not password or not blacklist:
+        return None
+
+    if password in blacklist:
+        password = 'b'
+
     return password
-
-
-def parse_args(args):
-
-    parser = argparse.ArgumentParser(description='Get password strength')
-    parser.add_argument('password', help='password')
-
-    return parser.parse_args(args)
 
 
 def get_password_strength(password):
     """
-    To get maximum score 10 password must be 13 chars long and have upper case,
-     lowercase, numeric and special characters. Script filter pasword if in black
-     list,have repetitions,common family names, phones, dates and replace it with 'b',
-      'r', 'n', 'p', 'd' respectivly
+    Return strength of a given password scoring from 1 to 10 where 10 is most secure one.
 
-    >>> get_password_strength('!PassworD1')
-    2
+    To get maximum score 10 password must be 13 chars long and have upper case,
+    lowercase, numeric and special characters. Script check password if in black
+    list, have repetitions, common family names, phones, dates and replace it with 'b',
+    'r', 'n', 'p', 'd' respectively and then get the score.
+
+    >>> get_password_strength('b')
+    1
+    >>> get_password_strength('password')
+    1
     >>> get_password_strength('maxmaxmaxmaxmax')
     2
     >>> get_password_strength('TvF^%KB6euEb$')
@@ -106,19 +167,25 @@ def get_password_strength(password):
     1
     >>> get_password_strength('+375-29-682-66-72')
     1
-    """
+    >>> get_password_strength(None)
 
-    filters = (
-        blacklist_filter,
-        filter_dates,
-        filter_names,
-        filter_phones,
-        filter_repetitions
+    """
+    if not password:
+        return None
+
+    blacklist_url = \
+        'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/darkweb2017-top10000.txt'
+    password = check_blacklist(password, get_blacklist_from_url(blacklist_url))
+
+    checks = (
+        check_dates,
+        check_slavonic_family_names,
+        check_phones,
+        check_repetitions
                )
 
-    for the_filter in filters:
-        password = the_filter(password)
-        # print(the_filter.__name__ + ': ' + password)
+    for check in checks:
+        password = check(password)
 
     all_chars_count = {
         '[a-z]': 26,
@@ -133,23 +200,28 @@ def get_password_strength(password):
 
     password_entropy = log2(variations) * len(password)
 
-    strength = round(password_entropy / 8)
+    score_tuning = 8
 
-    if strength < 1:
-        strength = 1
-    if strength > 10:
-        strength = 10
+    strength = round(password_entropy / score_tuning)
+
+    min_strength, max_strength = 1, 10
+    strength = max(min(max_strength, strength), min_strength)
+
     return strength
 
 
+def get_user_password():
+    try:
+        password = getpass.getpass()
+
+    except Exception as err:
+        print('ERROR:', err)
+    else:
+        return password
+
 if __name__ == '__main__':
 
-    try:
-        parser = parse_args(sys.argv[1:])
-
-        password = parser.password
-    except IOError:
-        password = None
+    password = get_user_password()
 
     print(get_password_strength(password))
 
