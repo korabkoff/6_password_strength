@@ -64,8 +64,8 @@ def get_blacklist_from_url(url):
 
     try:
         blacklist_req = requests.get(url)
-    except Exception as err:
-        print(err)
+    except requests.RequestException as e:
+        print(dict(error=e.message))
         return None
     asseptable_status_code = 200
     if blacklist_req.status_code <= asseptable_status_code:
