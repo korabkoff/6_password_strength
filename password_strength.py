@@ -70,12 +70,6 @@ def get_blacklist_from_url(url):
     except requests.exceptions.ConnectionError as errc:
         print("Error Connecting:", errc)
         return None
-    except requests.exceptions.Timeout as errt:
-        print("Timeout Error:", errt)
-        return None
-    except requests.exceptions.RequestException as err:
-        print("OOps: Something Else", err)
-        return None
 
     acceptable_status_code = 200
     if blacklist_req.status_code <= acceptable_status_code:
