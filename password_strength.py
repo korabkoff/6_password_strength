@@ -67,8 +67,8 @@ def get_blacklist_from_url(url):
     except requests.exceptions.HTTPError as errh:
         print("Http Error:", errh)
         return None
-    except requests.exceptions.ConnectionError as errc:
-        print("Error Connecting:", errc)
+    except requests.exceptions.RequestException as err:
+        print("OOps: Something Else", err)
         return None
 
     acceptable_status_code = 200
@@ -131,18 +131,9 @@ def get_password_strength(password):
     return strength
 
 
-def get_user_password():
-    try:
-        password = getpass.getpass()
-
-    except Exception as err:
-        print('ERROR:', err)
-    else:
-        return password
-
 if __name__ == '__main__':
 
-    password = get_user_password()
+    password = getpass.getpass()
 
     print(get_password_strength(password))
 
