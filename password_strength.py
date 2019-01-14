@@ -60,28 +60,23 @@ def check_repetitions(password):
     return password
 
 
-def get_blacklist_from_url(url):
-
+def load_blacklist(blacklist_path):
     try:
-        blacklist_req = requests.get(url)
-    except requests.exceptions.HTTPError as errh:
-        print("Http Error:", errh)
-        return None
-    except requests.exceptions.RequestException as err:
-        print("OOps: Something Else", err)
-        return None
+        with open(blacklist_path) as blacklist_dict_file:
+            blacklist = [row.strip() for row in blacklist_dict_file]
 
-    acceptable_status_code = 200
-    if blacklist_req.status_code <= acceptable_status_code:
-        return str(blacklist_req.text)
-    else:
+        return str(blacklist)
+
+    except IOError:
         return None
 
 
 def check_blacklist(password, blacklist):
 
-    if not password or not blacklist:
+    if not password:
         return None
+    if not blacklist:
+        return password
 
     if password in blacklist:
         password = 'b'
@@ -89,14 +84,14 @@ def check_blacklist(password, blacklist):
     return password
 
 
-def get_password_strength(password):
+def get_password_strength(password, blacklist_path):
 
     if not password:
         return None
-
-    blacklist_url = \
-        'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/darkweb2017-top10000.txt'
-    password = check_blacklist(password, get_blacklist_from_url(blacklist_url))
+    if not blacklist_path:
+        pass
+    else:
+        password = check_blacklist(password, load_blacklist(blacklist_path))
 
     checks = (
         check_dates,
@@ -134,6 +129,10 @@ def get_password_strength(password):
 if __name__ == '__main__':
 
     password = getpass.getpass()
+    try:
+        blacklist_path = sys.argv[1]
+    except IndexError:
+        blacklist_path = None
 
-    print(get_password_strength(password))
+    print(get_password_strength(password, blacklist_path))
 
