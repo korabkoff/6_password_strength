@@ -15,7 +15,7 @@ https://github.com/danielmiessler/SecLists/tree/master/Passwords
 script require python3.5 Example of script launch on Linux, Python 3.5:
 ```#!bash
 $ python password_strength.py <blacklist_path> # possibly requires call of python3 executive instead of just python
-<password>
+Password: <password>
 
 $ python password_strength.py  brut_force_dict.list
 >>> Password: password
